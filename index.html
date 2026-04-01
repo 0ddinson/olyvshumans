@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OLYS // THE_VAULT</title>
+    <!-- Google Fonts: Handjet (Variable 400-800) and Space Mono -->
+    <link href="https://fonts.googleapis.com/css2?family=Handjet:wght@400..800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --theme: #00f2ff;
+            --theme-glow: rgba(0, 242, 255, 0.2);
+            --bg: #030303;
+            --panel: rgba(5, 5, 5, 0.9);
+            --border: rgba(0, 242, 255, 0.1);
+        }
+
+        .vault-open {
+            --theme: #c9a050;
+            --theme-glow: rgba(201, 160, 80, 0.4);
+            --border: rgba(201, 160, 80, 0.3);
+            --bg: #0f0b02;
+        }
+
+        * { box-sizing: border-box; cursor: crosshair; }
+        
+        body, html { 
+            margin: 0; padding: 0; height: 100%; 
+            background: var(--bg); color: #fff;
+            font-family: 'Handjet', cursive;
+            overflow: hidden;
+            display: flex; justify-content: center; align-items: center;
+            transition: background 1.5s ease;
+        }
+
+        /* --- ATMOSPHERE --- */
+        .vault-bloom {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: radial-gradient(circle at center, var(--theme-glow) 0%, transparent 70%);
+            z-index: 2; opacity: 0; pointer-events: none;
+            transition: all 2s ease;
+        }
+        .vault-open .vault-bloom { opacity: 1; transform: scale(1.5); }
+
+        .grid {
+            position: fixed; width: 200%; height: 200%;
+            background-image: 
+                linear-gradient(var(--border) 1px, transparent 1px),
+                linear-gradient(90deg, var(--border) 1px, transparent 1px);
+            background-size: 50px 50px;
+            z-index: 1;
+            transform: perspective(600px) rotateX(60deg) translateY(-10%);
+            mask-image: radial-gradient(ellipse at center, black, transparent 75%);
+            pointer-events: none;
+            transition: all 1.5s cubic-bezier(0.19, 1, 0.22, 1);
+        }
+
+        .particles {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-image: radial-gradient(circle at 1px 1px, var(--theme) 1px, transparent 0);
+            background-size: 80px 80px;
+            z-index: 3; opacity: 0.15; pointer-events: none;
+            animation: float 25s linear infinite;
+        }
+        @keyframes float { from { transform: translateY(0); } to { transform: translateY(-1000px); } }
+
+        /* --- THE HUD INTERFACE --- */
+        .hud-frame {
+            position: relative; z-index: 10;
+            width: 500px;
+            padding: 3.5rem 2.5rem;
+            background: var(--panel);
+            backdrop-filter: blur(30px);
+            -webkit-backdrop-filter: blur(30px);
+            border: 1px solid var(--border);
+            text-align: center;
+            box-shadow: 0 0 80px rgba(0,0,0,0.9);
+            transition: all 1s cubic-bezier(0.19, 1, 0.22, 1);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .bracket {
+            position: absolute; width: 30px; height: 30px;
+            border: 1px solid var(--theme); opacity: 0.4;
+            transition: all 1s ease;
+        }
+        .tl { top: 15px; left: 15px; border-right: 0; border-bottom: 0; }
+        .tr { top: 15px; right: 15px; border-left: 0; border-bottom: 0; }
+        .bl { bottom: 15px; left: 15px; border-right: 0; border-top: 0; }
+        .br { bottom: 15px; right: 15px; border-left: 0; border-top: 0; }
+
+        .system-ticker {
+            font-size: 14px; font-weight: 400; color: var(--theme); 
+            letter-spacing: 2px; position: absolute; top: 18px; 
+            left: 50%; transform: translateX(-50%); text-transform: uppercase;
+        }
+
+        /* --- CONTENT STAGES --- */
+        .stage { display: none; opacity: 0; transform: translateY(10px); transition: 0.8s ease; }
+        .stage.active { display: block; opacity: 1; transform: translateY(0); }
+
+        h1 { 
+            font-family: 'Space Mono', monospace;
+            font-weight: 400; 
+            font-size: 1.4rem;
+            letter-spacing: 0.12rem; 
+            margin-top: 0; 
+            color: #999999; /* Muted Grey */
+            line-height: 1.4; 
+            margin-bottom: 2.2rem;
+            text-transform: uppercase;
+        }
+
+        /* --- INTERACTIVES --- */
+        input[type="password"] {
+            width: 100%; background: rgba(255,255,255,0.02); border: 1px solid var(--border);
+            padding: 12px; color: var(--theme); font-family: 'Handjet', cursive;
+            text-align: center; font-size: 2rem; outline: none; margin-bottom: 2rem;
+            transition: 0.4s; letter-spacing: 0.5rem;
+        }
+
+        .btn-action {
+            background: transparent; border: 1px solid #fff; color: #fff;
+            padding: 0.8rem 2.8rem; font-family: 'Handjet', cursive;
+            font-weight: 600; font-size: 1.4rem; letter-spacing: 3px;
+            text-transform: uppercase; cursor: pointer; transition: all 0.4s;
+        }
+        .btn-action:hover { background: #fff; color: #000; box-shadow: 0 0 30px rgba(255,255,255,0.2); }
+
+        .btn-theme { 
+            border-color: var(--theme); 
+            color: var(--theme); 
+            font-weight: 400; 
+        }
+        .btn-theme:hover { background: var(--theme); color: #000; box-shadow: 0 0 50px var(--theme); }
+
+        /* --- ASCENSION --- */
+        #final-header {
+            font-family: 'Space Mono', monospace;
+            font-size: 1.1rem;
+            font-weight: 400; 
+            color: var(--theme);
+            margin-bottom: 1.1rem;
+            text-transform: none;
+            letter-spacing: 0.15rem;
+        }
+
+        .scramble { 
+            font-family: 'Handjet', cursive; 
+            font-size: 4rem; 
+            color: #fff; 
+            text-shadow: 0 0 20px var(--theme-glow); 
+            line-height: 1.0;
+            margin-bottom: 2.2rem;
+            letter-spacing: 1px;
+            display: inline-block;
+        }
+        
+        .discord-btn {
+            background: #fff; color: #000; padding: 1rem 1.4rem; display: block;
+            text-decoration: none; font-family: 'Handjet', cursive;
+            font-weight: 800; font-size: 1.8rem; letter-spacing: 4px;
+            margin-top: 1.5rem; transition: 0.3s;
+            animation: pulse-gold 2s infinite; text-transform: uppercase;
+        }
+
+        @keyframes pulse-gold {
+            0% { box-shadow: 0 0 0px var(--theme-glow); }
+            50% { box-shadow: 0 0 40px var(--theme); transform: scale(1.02); }
+            100% { box-shadow: 0 0 0px var(--theme-glow); }
+        }
+
+        .unlocked-hud { width: 780px !important; border-color: var(--theme) !important; padding: 4.5rem 3rem !important; }
+
+        .laser {
+            position: fixed; top: 0; left: 0; width: 100%; height: 2px;
+            background: linear-gradient(90deg, transparent, var(--theme), transparent);
+            opacity: 0.15; z-index: 100; pointer-events: none;
+            animation: laser-scan 8s linear infinite;
+        }
+        @keyframes laser-scan { 0% { top: -10%; } 100% { top: 110%; } }
+
+        .data-stream { 
+            position: fixed; font-size: 14px; font-weight: 400; color: var(--theme); 
+            opacity: 0.4; text-transform: uppercase; font-family: 'Handjet', cursive;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="grid" id="grid"></div>
+    <div class="vault-bloom"></div>
+    <div class="particles"></div>
+    <div class="laser"></div>
+
+    <div class="data-stream" style="top:25px; left:25px;">STATUS: ACTIVE<br>SCANNING_HUMANITY...</div>
+    <div class="data-stream" style="bottom:25px; right:25px; text-align:right;">CORE_V4.2<br>VAULT_ENCRYPTED</div>
+
+    <div class="hud-frame" id="hud">
+        <div class="bracket tl"></div><div class="bracket tr"></div>
+        <div class="bracket bl"></div><div class="bracket br"></div>
+        
+        <div class="system-ticker" id="sys-status">CORE_IDLE // AWAITING_HUMAN</div>
+
+        <!-- STAGE 1 -->
+        <div id="stage-1" class="stage active">
+            <h1>ARE YOU A WORTHY HUMAN?</h1>
+            <button class="btn-action" onclick="toStage2()">Prove It</button>
+        </div>
+
+        <!-- STAGE 2 -->
+        <div id="stage-2" class="stage">
+            <h1>IDENTITY_CHALLENGE</h1>
+            <input type="password" id="passInput" placeholder="PASSKEY" autocomplete="off">
+            <br>
+            <button class="btn-action btn-theme" onclick="toStage3()">Initialize Ascension</button>
+        </div>
+
+        <!-- STAGE 3 -->
+        <div id="stage-3" class="stage">
+            <h1 id="final-header">vault_Open</h1>
+            <div class="scramble" id="scramble">STATUS: OLY APPROVED</div>
+            <a href="https://discord.gg/rMHuDDuFr" class="discord-btn" id="discord-link" target="_blank">Enter the Discord</a>
+        </div>
+    </div>
+
+    <script>
+        const SECRET = "ASC3ND";
+        const LINK = "https://discord.gg/rMHuDDuFr";
+
+        function toStage2() {
+            const s1 = document.getElementById('stage-1');
+            const s2 = document.getElementById('stage-2');
+            s1.classList.remove('active');
+            setTimeout(() => {
+                s1.style.display = 'none';
+                s2.style.display = 'block';
+                setTimeout(() => s2.classList.add('active'), 50);
+                document.getElementById('sys-status').innerText = "PENDING_HANDSHAKE...";
+            }, 600);
+        }
+
+        function toStage3() {
+            const val = document.getElementById('passInput').value;
+            if(val === SECRET) {
+                document.body.classList.add('vault-open');
+                const hud = document.getElementById('hud');
+                const s2 = document.getElementById('stage-2');
+                const s3 = document.getElementById('stage-3');
+                const grid = document.getElementById('grid');
+
+                s2.classList.remove('active');
+                hud.classList.add('unlocked-hud');
+                grid.style.transform = "perspective(600px) rotateX(80deg) scale(3)";
+                grid.style.opacity = "0.5";
+
+                setTimeout(() => {
+                    s2.style.display = 'none';
+                    s3.style.display = 'block';
+                    setTimeout(() => {
+                        s3.classList.add('active');
+                        startDecryption();
+                    }, 50);
+                    document.getElementById('sys-status').innerText = "ASCENSION_COMPLETE";
+                }, 600);
+            } else {
+                document.getElementById('hud').style.borderColor = "#ff0044";
+                setTimeout(() => document.getElementById('hud').style.borderColor = "var(--border)", 500);
+            }
+        }
+
+        function startDecryption() {
+            const target = document.getElementById('scramble');
+            const link = document.getElementById('discord-link');
+            
+            const finalString = "STATUS: OLY APPROVED";
+            const finalHTML = '<span style="font-weight:400">STATUS:</span> <span style="font-weight:700">OLY APPROVED</span>';
+            
+            const chars = "10X#$!%&?@";
+            let iter = 0;
+            link.href = LINK;
+
+            const interval = setInterval(() => {
+                target.innerText = target.innerText.split("")
+                    .map((char, index) => {
+                        if (index < iter) return finalString[index];
+                        return chars[Math.floor(Math.random() * chars.length)];
+                    }).join("");
+                
+                if (iter >= finalString.length) {
+                    clearInterval(interval);
+                    target.innerHTML = finalHTML;
+                }
+                iter += 1/4;
+            }, 50);
+        }
+
+        document.addEventListener('keypress', (e) => {
+            if(e.key === 'Enter' && document.getElementById('stage-2').classList.contains('active')) toStage3();
+        });
+    </script>
+</body>
+</html>
